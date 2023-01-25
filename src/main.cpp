@@ -2,6 +2,8 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <fstream>
+#include <utility>
 #include <unordered_set>
 #include <semaphore>
 #include <atomic>
@@ -121,11 +123,41 @@ ThreadSafeVar<uintmax_t> bytescopied;
 ThreadSafeVarVector<std::string> errors;
 ThreadSafeVar<int> finishedthreads;
 
+void CopyFile(std::string source, std::string dest, char* buffer, size_t bufsize)
+{
+	std::ifstream in(source, std::ios_base::binary);
+	std::ofstream out(dest, std::ios_base::binary | std::ios_base::trunc);
+	size_t ss = std::filesystem::file_size(source);
+	size_t read = 0;
+	if (in.is_open() && out.is_open()) {
+		try {
+			while (ss - read > bufsize) {
+				in.read(buffer, bufsize);
+				out.write((char*)buffer, bufsize);
+				read += bufsize;
+			}
+			if (ss - read > 0) {
+				in.read(buffer, ss - read);
+				out.write(buffer, ss - read);
+			}
+		} catch (std::ios_base::failure& e) {
+			errors.Push("[ERROR] [Copy File] " + std::string(e.what()));
+		}
+	} else {
+		errors.Push("[ERROR] [Copy File] cannot open files");
+	}
+	copied.Increment(1);
+	bytescopied.Increment(ss);
+}
+
 void Copy(size_t begin, size_t end)
 {
+	//size_t bufsize = 10485760;
+	//char* buffer = new char[10485760];
 	for (size_t i = begin; i < end && i < tocopy->size(); i++) {
 		// copy file
 		try {
+			//CopyFile(inputprefix + tocopy->at(i), outputprefix + tocopy->at(i), buffer, bufsize);
 			std::filesystem::copy_file(inputprefix + tocopy->at(i), outputprefix + tocopy->at(i), std::filesystem::copy_options::overwrite_existing);
 			copied.Increment(1);
 			bytescopied.Increment(std::filesystem::file_size(inputprefix + tocopy->at(i)));
@@ -134,6 +166,7 @@ void Copy(size_t begin, size_t end)
 			errors.Push("[ERROR] [Copy File] " + std::string(e.what()));
 		}
 	}
+	//delete[] buffer;
 	finishedthreads.Increment(1);
 }
 
