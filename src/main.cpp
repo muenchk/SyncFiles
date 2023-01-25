@@ -8,6 +8,8 @@
 #include <semaphore>
 #include <atomic>
 #include <chrono>
+#include <locale>
+#include <codecvt>
 
 template <typename T >
 	class ThreadSafeVar
@@ -114,9 +116,9 @@ class ThreadSafeVarVector
 	}
 };
 
-std::vector<std::string>* tocopy = nullptr;
-std::string inputprefix;
-std::string outputprefix;
+std::vector<std::wstring>* tocopy = nullptr;
+std::wstring inputprefix;
+std::wstring outputprefix;
 
 ThreadSafeVar<int> copied;
 ThreadSafeVar<uintmax_t> bytescopied;
@@ -244,12 +246,12 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	std::vector<std::string> filesinput;
-	std::vector<std::string> dirsinput;
-	std::vector<std::string> filesoutput;
-	std::vector<std::string> dirsoutput;
+	std::vector<std::wstring> filesinput;
+	std::vector<std::wstring> dirsinput;
+	std::vector<std::wstring> filesoutput;
+	std::vector<std::wstring> dirsoutput;
 
-	std::vector<std::string> dirstmp;
+	std::vector<std::wstring> dirstmp;
 
 	if (std::filesystem::exists(pathOutput) == false) {
 		std::filesystem::create_directories(pathOutput);
@@ -258,41 +260,46 @@ int main(int argc, char** argv)
 
 	printf("Find all files...\n");
 
+	//size_t count = 0;
+
 	auto inputiter = std::filesystem::recursive_directory_iterator(pathInput, std::filesystem::directory_options::follow_directory_symlink);
 	auto outputiter = std::filesystem::recursive_directory_iterator(pathOutput, std::filesystem::directory_options::follow_directory_symlink);
 	// iterate over all entries
 	try {
 		for (auto const& dir_entry : inputiter) {
+			//printf("%zd %ws\n", count, dir_entry.path().wstring().c_str());
+			//count++;
 			if (dir_entry.is_directory())
-				dirsinput.push_back(dir_entry.path().string());
+				dirsinput.push_back(dir_entry.path().wstring());
 			else
-				filesinput.push_back(dir_entry.path().string());
+				filesinput.push_back(dir_entry.path().wstring());
 		}
 		for (auto const& dir_entry : outputiter) {
 			if (dir_entry.is_directory())
-				dirsoutput.push_back(dir_entry.path().string());
+				dirsoutput.push_back(dir_entry.path().wstring());
 			else
-				filesoutput.push_back(dir_entry.path().string());
+				filesoutput.push_back(dir_entry.path().wstring());
 		}
 	}
 	catch (std::filesystem::filesystem_error& e) {
-		printf("ERROR: %s", e.what());
+		printf("ERROR: %s\n", e.what());
 	}
-	inputprefix = pathInput.string() + "\\";
-	outputprefix = pathOutput.string() + "\\";
+
+	inputprefix = pathInput.wstring() + std::filesystem::path::preferred_separator;
+	outputprefix = pathOutput.wstring() + std::filesystem::path::preferred_separator;
 	int inputprefixlength = (int)inputprefix.length();
 	int outputprefixlength = (int)outputprefix.length();
 	
 	printf("Calculate files...\n");
 
-	std::unordered_set<std::string> IFilesSet;
-	std::unordered_set<std::string> IDirSet;
-	std::unordered_set<std::string> OFilesSet;
-	std::unordered_set<std::string> ODirSet;
+	std::unordered_set<std::wstring> IFilesSet;
+	std::unordered_set<std::wstring> IDirSet;
+	std::unordered_set<std::wstring> OFilesSet;
+	std::unordered_set<std::wstring> ODirSet;
 
-	std::vector<std::string> overwrite;
-	std::vector<std::string> newer;
-	std::vector<std::string> identical;
+	std::vector<std::wstring> overwrite;
+	std::vector<std::wstring> newer;
+	std::vector<std::wstring> identical;
 
 	// remove prefixes from all pathes
 	for (int i = 0; i < filesinput.size(); i++) {
@@ -363,7 +370,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-	tocopy = new std::vector<std::string>;
+	tocopy = new std::vector<std::wstring>;
 	int nocopy = 0;
 	size_t bytestopcopy = 0;
 	printf("Calculating files to copy...\n");
