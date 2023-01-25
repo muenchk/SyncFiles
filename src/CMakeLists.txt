@@ -23,15 +23,9 @@ configure_file(
 	@ONLY
 )
 
-add_library(
+add_executable(
 	"${PROJECT_NAME}"
-	SHARED
-	${SOURCE_FILES}
-	"${VERSION_HEADER}"
-	"${CMAKE_CURRENT_BINARY_DIR}/version.rc"
-	"${ROOT_DIR}/.clang-format"
-	"${ROOT_DIR}/.editorconfig"
- "Papyrus/NPCsUsePotions_Poisons.cpp")
+	"${SOURCE_FILES}")
 
 target_compile_features(
 	"${PROJECT_NAME}"
