@@ -154,6 +154,7 @@ void CopyFile(std::string source, std::string dest, char* buffer, size_t bufsize
 
 void Copy(size_t begin, size_t end)
 {
+	std::error_code err;
 	//size_t bufsize = 10485760;
 	//char* buffer = new char[10485760];
 	for (size_t i = begin; i < end && i < tocopy->size(); i++) {
@@ -162,7 +163,7 @@ void Copy(size_t begin, size_t end)
 			//CopyFile(inputprefix + tocopy->at(i), outputprefix + tocopy->at(i), buffer, bufsize);
 			std::filesystem::copy_file(inputprefix + tocopy->at(i), outputprefix + tocopy->at(i), std::filesystem::copy_options::overwrite_existing);
 			copied.Increment(1);
-			bytescopied.Increment(std::filesystem::file_size(inputprefix + tocopy->at(i)));
+			bytescopied.Increment(std::filesystem::file_size(inputprefix + tocopy->at(i), err));
 		}
 		catch (std::filesystem::filesystem_error& e) {
 			errors.Push("[ERROR] [Copy File] " + std::string(e.what()));
@@ -301,30 +302,39 @@ int main(int argc, char** argv)
 	std::vector<std::wstring> newer;
 	std::vector<std::wstring> identical;
 
+	printf("check1\n");
 	// remove prefixes from all pathes
 	for (int i = 0; i < filesinput.size(); i++) {
 		IFilesSet.insert(filesinput[i].substr(inputprefixlength, filesinput[i].size() - inputprefixlength));
 	}
+	printf("check2\n");
 	for (int i = 0; i < dirsinput.size(); i++) {
 		IDirSet.insert(dirsinput[i].substr(inputprefixlength, dirsinput[i].size() - inputprefixlength));
 	}
+	printf("check3\n");
 	for (int i = 0; i < filesoutput.size(); i++) {
 		OFilesSet.insert(filesoutput[i].substr(outputprefixlength, filesoutput[i].size() - outputprefixlength));
 	}
+	printf("check4\n");
 	for (int i = 0; i < dirsoutput.size(); i++) {
 		ODirSet.insert(dirsoutput[i].substr(outputprefixlength, dirsoutput[i].size() - outputprefixlength));
 	}
 
 	std::filesystem::file_time_type ITime;
 	std::filesystem::file_time_type OTime;
+	printf("check5\n");
+	std::error_code err;
 
 	// check for existing files
 	// remaining in IFiles are new files
 	// remaining in OFiles are those to delete
 	for (auto const& file : IFilesSet) {
+		//printf("%ws\n", file.c_str());
 		if (OFilesSet.contains(file)) {
-			ITime = std::filesystem::last_write_time(inputprefix + file);
-			OTime = std::filesystem::last_write_time(outputprefix + file);
+			ITime = std::filesystem::last_write_time(inputprefix + file, err);
+			//printf("%s\n", err.message().c_str());
+			OTime = std::filesystem::last_write_time(outputprefix + file, err);
+			//printf("%s\n", err.message().c_str());
 			if (ITime > OTime) {
 				overwrite.push_back(file);
 			} else if (ITime < OTime) {
@@ -336,6 +346,7 @@ int main(int argc, char** argv)
 			OFilesSet.erase(file);
 		}
 	}
+	printf("check6\n");
 	// check for exsisting dirs
 	// remaining in IDir are new dirs
 	// remaining in ODir are those to delete
@@ -345,6 +356,7 @@ int main(int argc, char** argv)
 			ODirSet.erase(outputprefix + dir);
 		}
 	}
+	printf("check7\n");
 	
 	int cdeleted = 0;
 
@@ -378,14 +390,14 @@ int main(int argc, char** argv)
 	printf("New Files:         %5zd\n", IFilesSet.size());
 	for (auto const& file : IFilesSet) {
 		tocopy->push_back(file);
-		bytestopcopy += std::filesystem::file_size(inputprefix + file);
+		bytestopcopy += std::filesystem::file_size(std::filesystem::path(inputprefix + file), err);
 	}
 	// overwrite
 	printf("Overwrite Files:   %5zd\n", overwrite.size());
 	if (overwriteexisting) {
 		for (auto const& file : overwrite) {
 			tocopy->push_back(file);
-			bytestopcopy += std::filesystem::file_size(inputprefix + file);
+			bytestopcopy += std::filesystem::file_size(std::filesystem::path(inputprefix + file), err);
 		}
 	} else
 		nocopy += (int)overwrite.size();
@@ -394,7 +406,7 @@ int main(int argc, char** argv)
 	if (force) {
 		for (auto const& file : newer) {
 			tocopy->push_back(file);
-			bytestopcopy += std::filesystem::file_size(inputprefix + file);
+			bytestopcopy += std::filesystem::file_size(std::filesystem::path(inputprefix + file), err);
 		}
 	} else {
 		nocopy += (int)newer.size();
@@ -407,7 +419,7 @@ int main(int argc, char** argv)
 	// create directories
 	for (auto const& dir : IDirSet) {
 		try {
-			std::filesystem::create_directories(outputprefix + dir);
+			std::filesystem::create_directories(std::filesystem::path(outputprefix + dir), err);
 		} catch (std::filesystem::filesystem_error& e) {
 			errors.Push("[ERROR] [Create Directory] " + std::string(e.what()));
 		}
