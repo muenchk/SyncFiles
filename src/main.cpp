@@ -186,9 +186,9 @@ int main(int argc, char** argv)
 			overwriteexisting = true;
 		else if (pos = option.find("-p"); pos != std::string::npos)
 			{
-			try {
-				processors = std::stoi(option.substr(pos+2, option.size() - 2-pos));
-			}
+				try {
+					processors = std::stoi(option.substr(pos+2, option.size() - 2-pos));
+				}
 			catch (std::exception&) {
 
 			}
@@ -254,6 +254,7 @@ int main(int argc, char** argv)
 
 	std::vector<std::string> overwrite;
 	std::vector<std::string> newer;
+	std::vector<std::string> identical;
 
 	// remove prefixes from all pathes
 	for (int i = 0; i < filesinput.size(); i++) {
@@ -283,8 +284,8 @@ int main(int argc, char** argv)
 				overwrite.push_back(file);
 			} else if (ITime < OTime) {
 				newer.push_back(file);
-			} else if (force) {
-				overwrite.push_back(file);
+			} else {
+				identical.push_back(file);
 			}
 			IFilesSet.erase(file);
 			OFilesSet.erase(file);
@@ -329,14 +330,14 @@ int main(int argc, char** argv)
 	size_t bytestopcopy = 0;
 	printf("Calculating files to copy...\n");
 	// new files
-	printf("New Files:        %5zd\n", IFilesSet.size());
+	printf("New Files:         %5zd\n", IFilesSet.size());
 	for (auto const& file : IFilesSet) {
 		tocopy->push_back(file);
 		bytestopcopy += std::filesystem::file_size(inputprefix + file);
 	}
 	// overwrite
+	printf("Overwrite Files:   %5zd\n", overwrite.size());
 	if (overwriteexisting) {
-		printf("Overwrite Files:  %5zd\n", overwrite.size());
 		for (auto const& file : overwrite) {
 			tocopy->push_back(file);
 			bytestopcopy += std::filesystem::file_size(inputprefix + file);
@@ -344,8 +345,8 @@ int main(int argc, char** argv)
 	} else
 		nocopy += (int)overwrite.size();
 	// newer
+	printf("Newer Files:       %5zd\n", newer.size());
 	if (force) {
-		printf("Newer Files:      %5zd\n", newer.size());
 		for (auto const& file : newer) {
 			tocopy->push_back(file);
 			bytestopcopy += std::filesystem::file_size(inputprefix + file);
@@ -353,7 +354,10 @@ int main(int argc, char** argv)
 	} else {
 		nocopy += (int)newer.size();
 	}
-	printf("Files Not Copied: %5d\n", nocopy);
+	// indetical files are not copied
+	printf("Identical Files:   %5zd\n", identical.size());
+	printf("To Copy:\t%5zd / %5zd\n", tocopy->size(), tocopy->size() + nocopy);
+
 
 	// create directories
 	for (auto const& dir : IDirSet) {
