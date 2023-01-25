@@ -261,17 +261,22 @@ int main(int argc, char** argv)
 	auto inputiter = std::filesystem::recursive_directory_iterator(pathInput, std::filesystem::directory_options::follow_directory_symlink);
 	auto outputiter = std::filesystem::recursive_directory_iterator(pathOutput, std::filesystem::directory_options::follow_directory_symlink);
 	// iterate over all entries
-	for (auto const& dir_entry : inputiter) {
-		if (dir_entry.is_directory())
-			dirsinput.push_back(dir_entry.path().string());
-		else
-			filesinput.push_back(dir_entry.path().string());
+	try {
+		for (auto const& dir_entry : inputiter) {
+			if (dir_entry.is_directory())
+				dirsinput.push_back(dir_entry.path().string());
+			else
+				filesinput.push_back(dir_entry.path().string());
+		}
+		for (auto const& dir_entry : outputiter) {
+			if (dir_entry.is_directory())
+				dirsoutput.push_back(dir_entry.path().string());
+			else
+				filesoutput.push_back(dir_entry.path().string());
+		}
 	}
-	for (auto const& dir_entry : outputiter) {
-		if (dir_entry.is_directory())
-			dirsoutput.push_back(dir_entry.path().string());
-		else
-			filesoutput.push_back(dir_entry.path().string());
+	catch (std::filesystem::filesystem_error& e) {
+		printf("ERROR: %s", e.what());
 	}
 	inputprefix = pathInput.string() + "\\";
 	outputprefix = pathOutput.string() + "\\";
