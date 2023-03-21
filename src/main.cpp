@@ -167,7 +167,7 @@ void Copy(size_t begin, size_t end, bool move)
 				std::filesystem::copy_file(inputprefix + tocopy->at(i), outputprefix + tocopy->at(i), std::filesystem::copy_options::overwrite_existing);
 			}
 			copied.Increment(1);
-			bytescopied.Increment(std::filesystem::file_size(inputprefix + tocopy->at(i), err));
+			bytescopied.Increment(std::filesystem::file_size(outputprefix + tocopy->at(i), err));
 		}
 		catch (std::filesystem::filesystem_error& e) {
 			errors.Push("[ERROR] [Copy File] " + std::string(e.what()));
