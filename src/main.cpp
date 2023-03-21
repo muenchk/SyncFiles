@@ -152,7 +152,7 @@ void CopyFile(std::string source, std::string dest, char* buffer, size_t bufsize
 	bytescopied.Increment(ss);
 }
 
-void Copy(size_t begin, size_t end)
+void Copy(size_t begin, size_t end, bool move)
 {
 	std::error_code err;
 	//size_t bufsize = 10485760;
@@ -161,7 +161,11 @@ void Copy(size_t begin, size_t end)
 		// copy file
 		try {
 			//CopyFile(inputprefix + tocopy->at(i), outputprefix + tocopy->at(i), buffer, bufsize);
-			std::filesystem::copy_file(inputprefix + tocopy->at(i), outputprefix + tocopy->at(i), std::filesystem::copy_options::overwrite_existing);
+			if (move) {
+				std::filesystem::rename(inputprefix + tocopy->at(i), outputprefix + tocopy->at(i));
+			} else {
+				std::filesystem::copy_file(inputprefix + tocopy->at(i), outputprefix + tocopy->at(i), std::filesystem::copy_options::overwrite_existing);
+			}
 			copied.Increment(1);
 			bytescopied.Increment(std::filesystem::file_size(inputprefix + tocopy->at(i), err));
 		}
@@ -204,11 +208,13 @@ int main(int argc, char** argv)
 		printf("-d\t\tDelete files from Output folder that do not have a match in the input folder\n");
 		printf("-o\t\tOverwrite older files in the Outut folder\n");
 		printf("-f\t\tOverwrite all files in the Output folder\n");
+		printf("-m\t\tDeletes source files, after successful copy operation\n");
 		printf("-p<NUM>\tNumber of processors to use\n");
 		exit(1);
 	}
 	bool deletewithoutmatch = false;
 	bool overwriteexisting = false;
+	bool move = false;
 	bool force = false;
 	int processors = 1;
 	for (int i = 1; i < argc - 2; i++) {
@@ -220,6 +226,8 @@ int main(int argc, char** argv)
 			force = true;
 		else if (option.find("-o") != std::string::npos)
 			overwriteexisting = true;
+		else if (option.find("-m") != std::string::npos)
+			move = true;
 		else if (pos = option.find("-p"); pos != std::string::npos)
 			{
 				try {
@@ -235,6 +243,7 @@ int main(int argc, char** argv)
 	printf("Delete files without match:       %d\n", deletewithoutmatch);
 	printf("Overwrite existing older file:    %d\n", overwriteexisting);
 	printf("Overwrite all files:              %d\n", force);
+	printf("Delete source files:              %d\n", move);
 	printf("Processors:                       %d\n", processors);
 
 	sInput = std::string(argv[argc-2]);
@@ -433,11 +442,11 @@ int main(int argc, char** argv)
 	slice += 1;
 	for (int i = 1; begin < end && i <= processors; i++) {
 		if (i == processors) {
-			threads.push_back(new std::thread(Copy, begin, end));
+			threads.push_back(new std::thread(Copy, begin, end, move));
 			threads[threads.size() - 1]->detach();
 		}
 		else {
-			threads.push_back(new std::thread(Copy, begin, begin + slice));
+			threads.push_back(new std::thread(Copy, begin, begin + slice, move));
 			threads[threads.size() - 1]->detach();
 			begin += slice;
 		}
