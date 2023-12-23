@@ -414,7 +414,6 @@ int main(int argc, char** argv)
 		printf("Deleting files without match...\n");
 		for (auto const& file : OFilesSet) {
 			try {
-				printf("\t%ws\n", file.c_str());
 				std::filesystem::remove(outputprefix + file);
 				cdeleted++;
 			}
@@ -425,7 +424,6 @@ int main(int argc, char** argv)
 		printf("Deleting folder without math....\n");
 		for (auto const& dir : ODirSet) {
 			try {
-				printf("\t%ws\n", dir.c_str());
 				std::filesystem::remove_all(outputprefix + dir);
 			}
 			catch (std::filesystem::filesystem_error&) {
