@@ -10,6 +10,7 @@
 #include <chrono>
 #include <locale>
 #include <codecvt>
+#include <thread>
 
 template <typename T >
 	class ThreadSafeVar
@@ -209,6 +210,7 @@ int main(int argc, char** argv)
 		printf("-o\t\tOverwrite older files in the Outut folder\n");
 		printf("-f\t\tOverwrite all files in the Output folder\n");
 		printf("-m\t\tDeletes source files, after successful copy operation\n");
+		printf("--debug\tPrints debug information\n");
 		printf("-p<NUM>\tNumber of processors to use\n");
 		exit(1);
 	}
@@ -217,10 +219,13 @@ int main(int argc, char** argv)
 	bool move = false;
 	bool force = false;
 	int processors = 1;
+	bool debug = false;
 	for (int i = 1; i < argc - 2; i++) {
 		size_t pos = 0;
 		std::string option = std::string(argv[i]);
-		if (option.find("-d") != std::string::npos)
+		if (option.find("--debug") != std::string::npos)
+			debug = true;
+		else if (option.find("-d") != std::string::npos)
 			deletewithoutmatch = true;
 		else if (option.find("-f") != std::string::npos)
 			force = true;
@@ -334,6 +339,15 @@ int main(int argc, char** argv)
 	printf("check5\n");
 	std::error_code err;
 
+	if (debug) {
+		printf("IFilesSet\n");
+		for (auto const& file : IFilesSet)
+			printf("\t%ws\n", file.c_str());
+		printf("OFilesSet\n");
+		for (auto const& file : OFilesSet)
+			printf("\t%ws\n", file.c_str());
+	}
+
 	// check for existing files
 	// remaining in IFiles are new files
 	// remaining in OFiles are those to delete
@@ -351,20 +365,47 @@ int main(int argc, char** argv)
 			} else {
 				identical.push_back(file);
 			}
-			IFilesSet.erase(file);
 			OFilesSet.erase(file);
+			IFilesSet.erase(file);
 		}
 	}
+
+	if (debug) {
+		printf("IFilesSet\n");
+		for (auto const& file : IFilesSet)
+			printf("\t%ws\n", file.c_str());
+		printf("OFilesSet\n");
+		for (auto const& file : OFilesSet)
+			printf("\t%ws\n", file.c_str());
+
+		printf("IDirSet\n");
+		for (auto const& file : IDirSet)
+			printf("\t%ws\n", file.c_str());
+		printf("ODirSet\n");
+		for (auto const& file : ODirSet)
+			printf("\t%ws\n", file.c_str());
+	}
+
 	printf("check6\n");
 	// check for exsisting dirs
 	// remaining in IDir are new dirs
 	// remaining in ODir are those to delete
 	for (auto const& dir : IDirSet) {
 		if (ODirSet.contains(dir)) {
-			IDirSet.erase(inputprefix + dir);
-			ODirSet.erase(outputprefix + dir);
+			ODirSet.erase(dir);
+			IDirSet.erase(dir);
 		}
 	}
+
+	if (debug) {
+		printf("IDirSet\n");
+		for (auto const& file : IDirSet)
+			printf("\t%ws\n", file.c_str());
+		printf("ODirSet\n");
+		for (auto const& file : ODirSet)
+			printf("\t%ws\n", file.c_str());
+	}
+
 	printf("check7\n");
 	
 	int cdeleted = 0;
@@ -373,6 +414,7 @@ int main(int argc, char** argv)
 		printf("Deleting files without match...\n");
 		for (auto const& file : OFilesSet) {
 			try {
+				printf("\t%ws\n", file.c_str());
 				std::filesystem::remove(outputprefix + file);
 				cdeleted++;
 			}
@@ -383,6 +425,7 @@ int main(int argc, char** argv)
 		printf("Deleting folder without math....\n");
 		for (auto const& dir : ODirSet) {
 			try {
+				printf("\t%ws\n", dir.c_str());
 				std::filesystem::remove_all(outputprefix + dir);
 			}
 			catch (std::filesystem::filesystem_error&) {
@@ -422,6 +465,7 @@ int main(int argc, char** argv)
 	}
 	// indetical files are not copied
 	printf("Identical Files:   %5zd\n", identical.size());
+	printf("Deleted Files:   %5d\n", cdeleted);
 	printf("To Copy:\t%5zd / %5zd\n", tocopy->size(), tocopy->size() + nocopy);
 
 
