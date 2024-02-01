@@ -351,9 +351,9 @@ int main(int argc, char** argv)
 	// check for existing files
 	// remaining in IFiles are new files
 	// remaining in OFiles are those to delete
-	for (auto const& file : IFilesSet) {
+	for (auto const file : IFilesSet) {
 		//printf("%ws\n", file.c_str());
-		if (OFilesSet.contains(file)) {
+		if (file.empty() == false && OFilesSet.contains(file)) {
 			ITime = std::filesystem::last_write_time(inputprefix + file, err);
 			//printf("%s\n", err.message().c_str());
 			OTime = std::filesystem::last_write_time(outputprefix + file, err);
@@ -372,17 +372,17 @@ int main(int argc, char** argv)
 
 	if (debug) {
 		printf("IFilesSet\n");
-		for (auto const& file : IFilesSet)
+		for (auto const file : IFilesSet)
 			printf("\t%ws\n", file.c_str());
 		printf("OFilesSet\n");
-		for (auto const& file : OFilesSet)
+		for (auto const file : OFilesSet)
 			printf("\t%ws\n", file.c_str());
 
 		printf("IDirSet\n");
-		for (auto const& file : IDirSet)
+		for (auto const file : IDirSet)
 			printf("\t%ws\n", file.c_str());
 		printf("ODirSet\n");
-		for (auto const& file : ODirSet)
+		for (auto const file : ODirSet)
 			printf("\t%ws\n", file.c_str());
 	}
 
