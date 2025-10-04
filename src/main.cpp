@@ -296,6 +296,7 @@ int main(int argc, char** argv)
 		printf("-o\t\tOverwrite older files in the Outut folder\n");
 		printf("-f\t\tOverwrite all files in the Output folder\n");
 		printf("-m\t\tDeletes source files, after successful copy operation\n");
+		printf("-rm\t\tDeletes files / folders\n");
 		printf("--debug\tPrints debug information\n");
 		printf("-p<NUM>\tNumber of processors to use\n");
 		exit(1);
@@ -303,15 +304,19 @@ int main(int argc, char** argv)
 	bool deletewithoutmatch = false;
 	bool overwriteexisting = false;
 	bool move = false;
+	bool remove = false;
 	bool force = false;
 	int processors = 1;
 	bool debug = false;
 	bool search = false;
-	for (int i = 1; i < argc - 2; i++) {
+	std::vector<std::string> sinodes;
+	for (int i = 1; i < argc; i++) {
 		size_t pos = 0;
 		std::string option = std::string(argv[i]);
 		if (option.find("--debug") != std::string::npos)
 			debug = true;
+		else if (option.find("-rm") != std::string::npos)
+			remove = true;
 		else if (option.find("-d") != std::string::npos)
 			deletewithoutmatch = true;
 		else if (option.find("-s") != std::string::npos)
@@ -331,6 +336,10 @@ int main(int argc, char** argv)
 
 			}
 		}
+		else
+		{
+			sinodes.push_back(option);
+		}
 	}
 	if (force)
 		overwriteexisting = true;
@@ -340,20 +349,68 @@ int main(int argc, char** argv)
 	printf("Overwrite all files:              %d\n", force);
 	printf("Delete source files:              %d\n", move);
 	printf("Processors:                       %d\n", processors);
+	printf("Delete files:                     %d\n", remove);
 
 	sInput = std::string(argv[argc - 2]);
 	pathInput = std::filesystem::path(sInput);
 
-	if (!std::filesystem::exists(pathInput)) {
-		printf("Input path is empty\n");
-		exit(1);
-	}
-	if (search)
+	std::vector<std::filesystem::path> rfiles;
+	std::vector<std::filesystem::path> rdirs;
+	// parse files / folders
 	{
+		for (auto& str : sinodes)
+		{
+			if (std::filesystem::exists(str)) {
+				auto entry = std::filesystem::absolute(std::filesystem::path(str));
+				if (std::filesystem::is_directory(str)) {
+					rdirs.push_back(entry);
+					std::cout << "Folder:  " << entry.string() << "\n";
+				} else {
+					rfiles.push_back(entry);
+					std::cout << "File:  " << entry.string() << "\n";
+				}
+			} else
+				std::cout << "Cannot find path \"" + str + "\"\n";
+		}
+		sinodes.clear();
+	}
+
+	if (search) {
+		if (!std::filesystem::exists(pathInput)) {
+			printf("Input path is empty\n");
+			exit(1);
+		}
 		std::string name = std::string(argv[argc - 1]);
 		Search(pathInput, name);
+	} else if (remove) {
+		std::cout << "Do you really want to delete the files? [Y/N]";
+		std::string resp;
+		std::cin >> resp;
+		if (ToLower(resp) != "y")
 
+		{
+			std::cout << "Aborting...\n";
+			std::exit(0);
+		}
+		else
+		{
+			std::cout << "Deleting Files...\n";
+		}
+		try {
+			for (auto pth : rfiles)
+				std::filesystem::remove(pth);
+			for (auto pth : rdirs)
+				std::filesystem::remove_all(pth);
+		}
+		catch (std::exception& e) {
+			std::cout << e.what() << "\n";
+		}
+		std::cout << "Deleted all files.\n";
 	} else {
+		if (!std::filesystem::exists(pathInput)) {
+			printf("Input path is empty\n");
+			exit(1);
+		}
 		sOutput = std::string(argv[argc - 1]);
 		pathOutput = std::filesystem::path(sOutput);
 
