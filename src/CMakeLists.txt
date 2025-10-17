@@ -4,7 +4,8 @@ include_directories("${ROOT_DIR}/include")
 
 set(SOURCE_DIR "${ROOT_DIR}/src")
 set(SOURCE_FILES
-	"${SOURCE_DIR}/main.cpp")
+	"${SOURCE_DIR}/main.cpp"
+	"${SOURCE_DIR}/Functions.cpp")
 
 source_group(TREE "${ROOT_DIR}" FILES ${SOURCE_FILES})
 
@@ -92,16 +93,27 @@ target_include_directories(
 		"${SOURCE_DIR}"
 )
 
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_COMPILER_ID};${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "Clang;MSVC")
 install(
 	FILES
 		"$<TARGET_FILE:${PROJECT_NAME}>"
 	DESTINATION "SKSE/Plugins"
 	COMPONENT "main"
 )
-
+else ()
 install(
 	FILES
-		"$<TARGET_PDB_FILE:${PROJECT_NAME}>"
-	DESTINATION "/"
-	COMPONENT "pdbs"
+		"$<TARGET_FILE:${PROJECT_NAME}>"
+	DESTINATION "/usr/local/bin"
+	COMPONENT "main"
 )
+endif()
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+	install(
+		FILES
+			"$<TARGET_PDB_FILE:${PROJECT_NAME}>"
+		DESTINATION "/"
+		COMPONENT "pdbs"
+	)
+endif()

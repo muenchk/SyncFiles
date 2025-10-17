@@ -1,65 +1,73 @@
-#include "ThreadSafe.h"
+#pragma once
+#include "Types.h"
+#include <string>
+#include <vector>
+#include <thread>
+#include <filesystem>
+#include <unordered_set>
 #include <memory>
 #include <mutex>
-#include <chrono>
 
-void TraverseINodes(bool* working, ts_deque<std::filesystem::path>* queue, ts_deque<std::filesystem::path>* dirs, ts_deque<std::filesystem::path>* files, bool* stop_traverse, std::condition_variable* sync)
+class Functions
 {
-	std::filesystem::path pth;
-	while (*stop_traverse == false)
-	{
-		try {
-			pth = queue->get_pop_front();
-			*working = true;
-		}
-		catch (std::exception& e) {
-			*working = false;
-		}
-		if (*working)
-		{
-			std::filesystem::directory_iterator(pth);
-			for (const auto& entry : std::filesystem::directory_iterator(pth))
-			{
-				if (entry.exists() && !entry.path().empty()) {
-					if (std::filesystem::is_directory(entry.path()))
-						queue->push_back(entry.path());
-				}
-			}
-		}
-	}
-}
+private:
+	ts_deque<std::wstring> _copyQueue;
+	ts_deque<std::wstring> _deleteQueue;
+	ts_deque<std::wstring> _createDirsQueue;
+	bool _doneCreatingDirs = false;
+	bool _doneStuff = false;
+	std::condition_variable _waiterCond;
+	std::mutex _waiter;
+	std::wstring _inputPrefix;
+	std::wstring _outputPrefix;
 
-void DeleteINodes(ts_deque<std::filesystem::path>* dirs, ts_deque<std::filesystem::path>* files, bool* stop_delete, std::condition_variable* sync)
-{
-	std::mutex mut;
-	std::unique_lock<std::mutex> guard(mut);
-	while (*stop_delete == false)
-	{
-		sync->wait_for(guard, std::chrono::milliseconds(10), [stop_delete, dirs, files] { *stop_delete == true || dirs->empty() == false || files->empty() == false; });
-		bool found = true;
-		std::filesystem::path pth;
-		while (found)
-		{
-			try {
-				pth = files->get_pop_front();
-				found = true;
-			}
-			catch (std::exception& e) {
-				found = false;
-			}
-			if (found)
-				std::filesystem::remove_all(pth);
-		}
-		found = true;
-		while (found) {
-			try {
-				pth = dirs->get_pop_front();
-				found = true;
-			} catch (std::exception& e) {
-				found = false;
-			}
-			if (found)
-				std::filesystem::remove_all(pth);
-		}
-	}
-}
+	std::vector<std::thread> _threads;
+
+	ts_deque<std::wstring> IFilesSet;
+	std::unordered_set<std::wstring> IDirSet;
+	std::unordered_set<std::wstring> OFilesSet;
+	std::unordered_set<std::wstring> ODirSet;
+
+	std::deque<std::wstring> filesinput;
+	std::deque<std::wstring> dirsinput;
+	std::deque<std::wstring> filesoutput;
+	std::deque<std::wstring> dirsoutput;
+
+	std::deque<std::wstring> dirstmp;
+
+	int outputprefixlength = 0;
+	int inputprefixlength = 0;
+
+	int cdeleted = 0;
+	
+	bool _move = false;
+	bool _force = false;
+	bool _overwriteexisting = false;
+
+	void Helper_IFiles();
+	void Helper_OFiles();
+	void Helper_IDirSet();
+	void Helper_ODirSet();
+
+	void Helper_SortFiles();
+
+	void Helper_CreateDirs();
+
+	void DoStuff();
+
+	bool _finished = false;
+
+public:
+	void Copy(std::filesystem::path inputPath, std::filesystem::path outputPath, bool deletewithoutmatch, bool overwriteexisting, bool force, bool move, int processors);
+
+	void Wait();
+
+	bool IsFinished();
+
+	std::atomic<size_t> _bytesToCopy = 0;
+	std::atomic<size_t> _filesToCopy = 0;
+	std::atomic<size_t> _bytesCopied = 0;
+	std::atomic<size_t> _filesCopied = 0;
+
+	ts_deque<std::string> errors;
+};

@@ -58,6 +58,72 @@
       ],
       "name": "basic",
       "toolset": "v143"
+    },
+    {
+      "name": "base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "$env{PROJECT_PLATFORM_FLAGS} $env{PROJECT_TEXT_FLAGS} $env{PROJECT_COMPILER_FLAGS} $penv{CXX_FLAGS}"
+      },
+      "errors": {
+        "deprecated": true
+      },
+      "warnings": {
+        "deprecated": true,
+        "dev": true
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "intelliSenseMode": "$env{PROJECT_PLATFORM}-$env{PROJECT_COMPILER}-$env{PROJECT_ARCHITECTURE}",
+          "enableMicrosoftCodeAnalysis": true,
+          "enableClangTidyCodeAnalysis": true
+        }
+      }
+    },
+    {
+      "name": "vcpkg-linux",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-linux",
+        "VCPKG_HOST_TRIPLET": "x64-linux",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake"
+      }
+    },
+    {
+      "name": "clang",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-18",
+        "CMAKE_CXX_COMPILER": "clang++-18"
+      },
+      "environment": {
+        "PROJECT_COMPILER": "clang",
+        "PROJECT_COMPILER_FLAGS": "-Wno-overloaded-virtual -Wno-delete-non-abstract-non-virtual-dtor -Wno-inconsistent-missing-override -Wno-reinterpret-base-class -Wno-builtin-macro-redefined -Wno-deprecated-declarations -D__cpp_lib_char8_t -D__cpp_consteval -D__cpp_lib_format"
+      }
+    },
+    {
+      "name": "linux",
+      "inherits": [
+        "base",
+        "vcpkg-linux",
+        "clang"
+      ],
+      "displayName": "Linux",
+      "description": "Optimized release build.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/buildLinux",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": "$env{NinjaPath}",
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "Release"
+        }
+      }
     }
   ],
   "version": 3

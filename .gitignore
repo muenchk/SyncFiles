@@ -1,5 +1,6 @@
 build/
 buildvr/
+buildLinux/
 .vs/
 src/.vs/
 src/.vscode
