@@ -136,31 +136,28 @@ void Functions::Helper_SortFiles()
 	while (IFilesSet.size() > 0) {
 		try {
 			std::wstring file = IFilesSet.get_pop_front();
-			//printf("%ws\n", file.c_str());
 			if (file.empty() == false && OFilesSet.contains(file)) {
 				ITime = std::filesystem::last_write_time(_inputPrefix + file, err);
-				//printf("%s\n", err.message().c_str());
 				OTime = std::filesystem::last_write_time(_outputPrefix + file, err);
-				//printf("%s\n", err.message().c_str());
+				// if input file time is newer than output file time
 				if (ITime > OTime) {
 					_copyQueue.push_back(file);
 					_bytesToCopy += std::filesystem::file_size(std::filesystem::path(_inputPrefix + file), err);
 					_filesToCopy++;
-					//overwrite.push_back(file);
+				// if output file time is newer only overwrite if force is enabled
 				} else if (ITime < OTime) {
 					if (_force) {
 						_copyQueue.push_back(file);
 						_bytesToCopy += std::filesystem::file_size(std::filesystem::path(_inputPrefix + file), err);
 						_filesToCopy++;
 					}
-					//newer.push_back(file);
+				// if times are identical overwrite is overwriteexisting is enabled, or file sizes are different
 				} else {
-					if (_overwriteexisting) {
+					if (_overwriteexisting || std::filesystem::file_size(_inputPrefix + file) != std::filesystem::file_size(_outputPrefix + file)) {
 						_copyQueue.push_back(file);
 						_bytesToCopy += std::filesystem::file_size(std::filesystem::path(_inputPrefix + file), err);
 						_filesToCopy++;
 					}
-					//identical.push_back(file);
 				}
 				OFilesSet.erase(file);
 			} else {
@@ -237,7 +234,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 		// crash if we fail
 	}
 
-	printf("Find all files...\n");
+	printf("Find all files...");
 	auto begin = std::chrono::steady_clock::now();
 
 	std::thread thr1([inputPath, outfiles = &filesinput, outdirs = &dirsinput]() {
@@ -248,27 +245,6 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	});
 	thr1.join();
 	thr2.join();
-	/* auto inputiter = std::filesystem::recursive_directory_iterator(inputPath, std::filesystem::directory_options::follow_directory_symlink);
-	auto outputiter = std::filesystem::recursive_directory_iterator(outputPath, std::filesystem::directory_options::follow_directory_symlink);
-	 //iterate over all entries
-	try {
-		for (auto const& dir_entry : inputiter) {
-			//printf("%zd %ws\n", count, dir_entry.path().wstring().c_str());
-			//count++;
-			if (dir_entry.is_directory())
-				dirsinput.push_back(dir_entry.path().wstring());
-			else
-				filesinput.push_back(dir_entry.path().wstring());
-		}
-		for (auto const& dir_entry : outputiter) {
-			if (dir_entry.is_directory())
-				dirsoutput.push_back(dir_entry.path().wstring());
-			else
-				filesoutput.push_back(dir_entry.path().wstring());
-		}
-	} catch (std::filesystem::filesystem_error& e) {
-		printf("ERROR: %s\n", e.what());
-	}*/
 	std::cout << Utility::FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str() << "\n";
 	// we have found all files, generate prefixes
 	printf("Generate prefixes...");
