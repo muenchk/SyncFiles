@@ -1,6 +1,7 @@
 #include "Functions.h"
 #include <functional>
 #include <chrono>
+#include <iostream>
 
 Functions::~Functions()
 {
@@ -216,6 +217,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	}
 
 	printf("Find all files...\n");
+	auto begin = std::chrono::steady_clock::now();
 
 	auto inputiter = std::filesystem::recursive_directory_iterator(inputPath, std::filesystem::directory_options::follow_directory_symlink);
 	auto outputiter = std::filesystem::recursive_directory_iterator(outputPath, std::filesystem::directory_options::follow_directory_symlink);
@@ -238,17 +240,20 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	} catch (std::filesystem::filesystem_error& e) {
 		printf("ERROR: %s\n", e.what());
 	}
-
+	std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
 	// we have found all files, generate prefixes
-	printf("Generate prefixes...\n");
+	printf("Generate prefixes...");
+	begin = std::chrono::steady_clock::now();
 
 	_inputPrefix = inputPath.wstring().append(1, std::filesystem::path::preferred_separator);
 	_outputPrefix = outputPath.wstring().append(1, std::filesystem::path::preferred_separator);
 	inputprefixlength = (int)_inputPrefix.length();
 	outputprefixlength = (int)_outputPrefix.length();
 
+	std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
 	// calculate files we need
-	printf("Calculate files...\n");
+	printf("Calculate files...");
+	begin = std::chrono::steady_clock::now();
 
 	// remove prefixes from all paths
 	{
@@ -266,7 +271,9 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 		std::unique_lock<std::shared_mutex> guard(barrier);
 	}
 
-	printf("Handle directories...\n");
+	std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
+	printf("Handle directories...");
+	begin = std::chrono::steady_clock::now();
 
 	std::error_code err;
 
@@ -293,6 +300,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	//_doneCreatingDirs = true;
 	//thcr.join();
 
+	std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
 	printf("Actually Copy...\n");
 
 	for (int i = 0; i < processors; i++)
@@ -316,11 +324,13 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	}
 
 	if (deletewithoutmatch) {
-		printf("Deleting files without match...\n");
+		printf("Deleting files without match...");
+		begin = std::chrono::steady_clock::now();
 		for (auto const& file : OFilesSet) {
 			_deleteQueue.push_back(_outputPrefix + file);
 			cdeleted++;
 		}
+		std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
 	}
 
 	_doneStuff = true;
@@ -333,7 +343,8 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	// clean up
 
 	if (deletewithoutmatch) {
-		printf("Deleting folder without math....\n");
+		printf("Deleting folder without math...");
+		begin = std::chrono::steady_clock::now();
 		for (auto const dir : ODirSet) {
 			try {
 				std::filesystem::remove_all(_outputPrefix + dir);
@@ -342,6 +353,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 			}
 		}
 		ODirSet.clear();
+		std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
 	}
 
 	_finished = true;

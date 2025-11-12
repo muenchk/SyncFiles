@@ -255,7 +255,9 @@ int main(int argc, char** argv)
 
 
 		Functions func = Functions();
-		func.Copy(pathInput, pathOutput, deletewithoutmatch, overwriteexisting, force, move, processors);
+		std::thread th([&func, &pathInput, &pathOutput, &deletewithoutmatch, &overwriteexisting, &force, &move, &processors]() {
+			func.Copy(pathInput, pathOutput, deletewithoutmatch, overwriteexisting, force, move, processors);
+		});
 
 
 		bool finished = false;
@@ -268,6 +270,7 @@ int main(int argc, char** argv)
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		}
+		th.join();
 
 		printf("Errors: %zd\n", func.errors.size());
 		for (size_t i = 0; i < func.errors.size(); i++) {
