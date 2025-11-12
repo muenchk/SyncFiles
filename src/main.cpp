@@ -265,8 +265,8 @@ int main(int argc, char** argv)
 			if (func.IsFinished()) {
 				finished = true;
 			}
-
-			printf("Written Files:\t%5llu / %5llu\t\tSizeWritten:\t%llu / %llu\n", func._filesCopied.load(), func._filesToCopy.load(), func._bytesCopied.load(), func._bytesToCopy.load());
+			if (func._activeCopy)
+				printf("Written Files:\t%5llu / %5llu\t\tSizeWritten:\t%llu / %llu\n", func._filesCopied.load(), func._filesToCopy.load(), func._bytesCopied.load(), func._bytesToCopy.load());
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		}

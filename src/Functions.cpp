@@ -308,6 +308,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	std::cout << Utility::FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str() << "\n";
 	printf("Actually Copy...\n");
 
+	_activeCopy = true;
 	for (int i = 0; i < processors; i++)
 	{
 		_threads.emplace_back(std::thread(&Functions::DoStuff, this));
@@ -335,11 +336,12 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 			_deleteQueue.push_back(_outputPrefix + file);
 			cdeleted++;
 		}
-		std::cout << Utility::FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str() << "\n";
+		//std::cout << Utility::FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str() << "\n";
 	}
 
 	_doneStuff = true;
 	
+	_activeCopy = false;
 	for (int i = 0; i < processors; i++) {
 		_threads[i].join();
 	}

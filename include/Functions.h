@@ -80,6 +80,8 @@ public:
 	std::atomic<size_t> _bytesCopied = 0;
 	std::atomic<size_t> _filesCopied = 0;
 
+	bool _activeCopy = false;
+
 	ts_deque<std::string> errors;
 };
 
