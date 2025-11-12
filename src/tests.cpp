@@ -16,7 +16,11 @@ TEST_CASE("test Copy", "[copy]")
 	auto force = GENERATE(true, false);
 	auto rm = GENERATE(false, true);
 	Functions func;
-	func.Copy(L"../../tests", L"../../tests_out", deletewithoutmatch, overwriteexisting, force, false, processors);
+
+	std::thread th([&func, &deletewithoutmatch, &overwriteexisting, &force, &processors]() {
+		func.Copy(L"../../tests", L"../../tests_out", deletewithoutmatch, overwriteexisting, force, false, processors);
+	});
+	th.join();
 
 	boost::unordered_set<std::wstring> filesinput = Functions::GetFilesRelative(L"../../tests");
 	boost::unordered_set<std::wstring> filesoutput = Functions::GetFilesRelative(L"../../tests_out");
