@@ -2,26 +2,70 @@
 #include <functional>
 #include <chrono>
 
+Functions::~Functions()
+{
+	if (_threads.size() > 0)
+		for (std::thread& thread: _threads)
+		{
+			if (thread.joinable())
+				thread.~thread();
+		}
+	_copyQueue.clear();
+	_deleteQueue.clear();
+	_createDirsQueue.clear();
+
+	IFilesSet.clear();
+
+	filesinput.clear();
+	dirsinput.clear();
+	filesoutput.clear();
+	dirsoutput.clear();
+
+	dirstmp.clear();
+
+	
+	_copyQueue.~ts_deque();
+	_deleteQueue.~ts_deque();
+	_createDirsQueue.~ts_deque();
+
+	IFilesSet.~ts_deque();
+	IDirSet.clear();
+	OFilesSet.clear();
+	ODirSet.clear();
+
+	filesinput.~deque();
+	dirsinput.~deque();
+	filesoutput.~deque();
+	dirsoutput.~deque();
+
+	dirstmp.~deque();
+}
+
 void Functions::Helper_IFiles()
 {
+	std::shared_lock<std::shared_mutex> guard(barrier);
 	for (int i = 0; i < filesinput.size(); i++) {
 		IFilesSet.push_back(filesinput[i].substr(inputprefixlength, filesinput[i].size() - inputprefixlength));
 	}
 }
+
 void Functions::Helper_OFiles() 
 {
+	std::shared_lock<std::shared_mutex> guard(barrier);
 	for (int i = 0; i < filesoutput.size(); i++) {
 		OFilesSet.insert(filesoutput[i].substr(outputprefixlength, filesoutput[i].size() - outputprefixlength));
 	}
 }
 void Functions::Helper_IDirSet() 
 {
+	std::shared_lock<std::shared_mutex> guard(barrier);
 	for (int i = 0; i < dirsinput.size(); i++) {
 		IDirSet.insert(dirsinput[i].substr(inputprefixlength, dirsinput[i].size() - inputprefixlength));
 	}
 }
 void Functions::Helper_ODirSet() 
 {
+	std::shared_lock<std::shared_mutex> guard(barrier);
 	for (int i = 0; i < dirsoutput.size(); i++) {
 		ODirSet.insert(dirsoutput[i].substr(outputprefixlength, dirsoutput[i].size() - outputprefixlength));
 	}
@@ -127,6 +171,38 @@ void Functions::Helper_SortFiles()
 	}
 }
 
+boost::unordered_set<std::wstring> Functions::GetFilesRelative(std::filesystem::path inputPath)
+{
+	boost::unordered_set<std::wstring> files;
+
+	if (std::filesystem::exists(inputPath) == false) {
+		return files;
+	}
+	std::wstring _inputPrefix = inputPath.wstring().append(1, std::filesystem::path::preferred_separator);
+	int inputprefixlength = (int)_inputPrefix.length();
+
+	std::unordered_set<std::wstring> filesinput;
+	std::unordered_set<std::wstring> dirsinput;
+	auto inputiter = std::filesystem::recursive_directory_iterator(inputPath, std::filesystem::directory_options::follow_directory_symlink);
+	//iterate over all entries
+	try {
+		for (auto const& dir_entry : inputiter) {
+			//printf("%zd %ws\n", count, dir_entry.path().wstring().c_str());
+			//count++;
+			if (dir_entry.is_directory())
+				dirsinput.insert(dir_entry.path().wstring());
+			else
+				filesinput.insert(dir_entry.path().wstring());
+		}
+	} catch (std::filesystem::filesystem_error& e) {
+		printf("ERROR: %s\n", e.what());
+	}
+	for (auto file : filesinput) {
+		files.insert(file.substr(inputprefixlength, file.size() - inputprefixlength));
+	}
+	return files;
+}
+
 void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outputPath, bool deletewithoutmatch, bool overwriteexisting, bool force, bool move, int processors)
 {
 	_finished = false;
@@ -164,6 +240,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	}
 
 	// we have found all files, generate prefixes
+	printf("Generate prefixes...\n");
 
 	_inputPrefix = inputPath.wstring().append(1, std::filesystem::path::preferred_separator);
 	_outputPrefix = outputPath.wstring().append(1, std::filesystem::path::preferred_separator);
@@ -171,6 +248,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	outputprefixlength = (int)_outputPrefix.length();
 
 	// calculate files we need
+	printf("Calculate files...\n");
 
 	// remove prefixes from all paths
 	{
@@ -184,17 +262,25 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 		th4.join();
 	}
 
+	{
+		std::unique_lock<std::shared_mutex> guard(barrier);
+	}
+
+	printf("Handle directories...\n");
+
 	std::error_code err;
 
 	//std::thread thcr = std::thread(&Functions::Helper_CreateDirs, this);
-	for (auto const& dir : IDirSet) {
+	// 
+	for (auto dir : IDirSet) {
 		if (ODirSet.contains(dir)) {
 			ODirSet.erase(dir);
-			IDirSet.erase(dir);
+			//IDirSet.erase(dir);
+			continue;
 		}
 		else
 		{
-			IDirSet.erase(dir);
+			//IDirSet.erase(dir);
 			//_createDirsQueue.push_back(dir);
 			try {
 				std::filesystem::create_directories(std::filesystem::path(_outputPrefix + dir), err);
@@ -203,8 +289,11 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 			}
 		}
 	}
+	IDirSet.clear();
 	//_doneCreatingDirs = true;
 	//thcr.join();
+
+	printf("Actually Copy...\n");
 
 	for (int i = 0; i < processors; i++)
 	{
@@ -239,18 +328,20 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	for (int i = 0; i < processors; i++) {
 		_threads[i].join();
 	}
+	_threads.clear();
 
 	// clean up
 
 	if (deletewithoutmatch) {
 		printf("Deleting folder without math....\n");
-		for (auto const& dir : ODirSet) {
+		for (auto const dir : ODirSet) {
 			try {
 				std::filesystem::remove_all(_outputPrefix + dir);
 			} catch (std::filesystem::filesystem_error&) {
 				// don't output, since we could try to delete folders we already deleted, since we are in alphabetical order
 			}
 		}
+		ODirSet.clear();
 	}
 
 	_finished = true;

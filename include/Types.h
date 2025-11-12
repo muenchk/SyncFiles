@@ -128,6 +128,11 @@ private:
 	}
 
 public:
+	~ts_deque()
+	{
+		_queue.~deque();
+	}
+
 	std::deque<T, Allocator>& data()
 	{
 		return _queue;

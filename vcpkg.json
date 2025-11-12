@@ -1,0 +1,24 @@
+{
+  "name": "example",
+  "version": "1",
+  "dependencies": [
+    "spdlog",
+    "boost-stl-interfaces",
+    "boost-unordered",
+    "fmt",
+    "catch2",
+    {
+      "name": "boost-stacktrace"
+    },
+    "frozen",
+    {
+      "name": "infoware",
+      "features": [
+        "d3d"
+      ],
+      "platform": "windows"
+    },
+    "magic-enum",
+    "zydis"
+  ]
+}
