@@ -270,7 +270,7 @@ void Functions::ReconstitueSymlinks(std::vector<std::filesystem::path> folders)
 			bool found = false;
 			for (size_t i = 1; i < folders.size(); i++)
 			{
-				if (dirs[i].contains(dir))
+				if (dirs[i].contains(dir) || dirs[i].contains(pth.filename().wstring()))
 				{
 					found = true;
 					std::cout << "\t Found replacement. Copy replacement...";

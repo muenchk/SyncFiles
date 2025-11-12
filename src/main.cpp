@@ -275,12 +275,12 @@ int main(int argc, char** argv)
 				finished = true;
 			}
 			if (func._activeCopy)
-				printf("Written Files:\t%5llu / %5llu\t\tSizeWritten:\t%llu / %llu\n", func._filesCopied.load(), func._filesToCopy.load(), func._bytesCopied.load(), func._bytesToCopy.load());
+				printf("Written Files:\t%5llu / %5llu\t\tSizeWritten:\t%llu / %llu\t %d%%\n", func._filesCopied.load(), func._filesToCopy.load(), func._bytesCopied.load(), func._bytesToCopy.load(), (int)((double)func._bytesCopied.load() / (double)func._bytesToCopy.load() * 100));
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		}
 		th.join();
-		printf("Written Files:\t%5llu / %5llu\t\tSizeWritten:\t%llu / %llu\n", func._filesCopied.load(), func._filesToCopy.load(), func._bytesCopied.load(), func._bytesToCopy.load());
+		printf("Written Files:\t%5llu / %5llu\t\tSizeWritten:\t%llu / %llu\t %d%%\n", func._filesCopied.load(), func._filesToCopy.load(), func._bytesCopied.load(), func._bytesToCopy.load(), (int)((double)func._bytesCopied.load() / (double)func._bytesToCopy.load() * 100));
 
 		printf("Errors: %zd\n", func.errors.size());
 		for (size_t i = 0; i < func.errors.size(); i++) {
