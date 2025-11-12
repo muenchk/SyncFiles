@@ -9,6 +9,7 @@ src/TODO.txt
 src/Changelog.txt
 startenv.bat
 startenvlaptop.bat
+tests_out/
 
 # Prerequisites
 *.d

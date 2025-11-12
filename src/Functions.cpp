@@ -203,6 +203,27 @@ boost::unordered_set<std::wstring> Functions::GetFilesRelative(std::filesystem::
 	}
 	return files;
 }
+void Functions::GetFiles(std::filesystem::path inputPath, std::deque<std::wstring>& outfiles, std::deque<std::wstring>& outdirs)
+{
+	if (std::filesystem::exists(inputPath) == false) {
+		return;
+	}
+
+	auto inputiter = std::filesystem::recursive_directory_iterator(inputPath, std::filesystem::directory_options::follow_directory_symlink);
+	//iterate over all entries
+	try {
+		for (auto const& dir_entry : inputiter) {
+			//printf("%zd %ws\n", count, dir_entry.path().wstring().c_str());
+			//count++;
+			if (dir_entry.is_directory())
+				outdirs.push_back(dir_entry.path().wstring());
+			else
+				outfiles.push_back(dir_entry.path().wstring());
+		}
+	} catch (std::filesystem::filesystem_error& e) {
+		printf("ERROR: %s\n", e.what());
+	}
+}
 
 void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outputPath, bool deletewithoutmatch, bool overwriteexisting, bool force, bool move, int processors)
 {
@@ -219,7 +240,15 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	printf("Find all files...\n");
 	auto begin = std::chrono::steady_clock::now();
 
-	auto inputiter = std::filesystem::recursive_directory_iterator(inputPath, std::filesystem::directory_options::follow_directory_symlink);
+	std::thread thr1([inputPath, outfiles = &filesinput, outdirs = &dirsinput]() {
+		GetFiles(inputPath, *outfiles, *outdirs);
+	});
+	std::thread thr2([outputPath, outfiles = &filesoutput, outdirs = &dirsoutput]() {
+		GetFiles(outputPath, *outfiles, *outdirs);
+	});
+	thr1.join();
+	thr2.join();
+	/* auto inputiter = std::filesystem::recursive_directory_iterator(inputPath, std::filesystem::directory_options::follow_directory_symlink);
 	auto outputiter = std::filesystem::recursive_directory_iterator(outputPath, std::filesystem::directory_options::follow_directory_symlink);
 	 //iterate over all entries
 	try {
@@ -239,8 +268,8 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 		}
 	} catch (std::filesystem::filesystem_error& e) {
 		printf("ERROR: %s\n", e.what());
-	}
-	std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
+	}*/
+	std::cout << Utility::FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str() << "\n";
 	// we have found all files, generate prefixes
 	printf("Generate prefixes...");
 	begin = std::chrono::steady_clock::now();
@@ -250,7 +279,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	inputprefixlength = (int)_inputPrefix.length();
 	outputprefixlength = (int)_outputPrefix.length();
 
-	std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
+	std::cout << Utility::FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str() << "\n";
 	// calculate files we need
 	printf("Calculate files...");
 	begin = std::chrono::steady_clock::now();
@@ -271,7 +300,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 		std::unique_lock<std::shared_mutex> guard(barrier);
 	}
 
-	std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
+	std::cout << Utility::FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str() << "\n";
 	printf("Handle directories...");
 	begin = std::chrono::steady_clock::now();
 
@@ -300,7 +329,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 	//_doneCreatingDirs = true;
 	//thcr.join();
 
-	std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
+	std::cout << Utility::FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str() << "\n";
 	printf("Actually Copy...\n");
 
 	for (int i = 0; i < processors; i++)
@@ -330,7 +359,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 			_deleteQueue.push_back(_outputPrefix + file);
 			cdeleted++;
 		}
-		std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
+		std::cout << Utility::FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str() << "\n";
 	}
 
 	_doneStuff = true;
@@ -353,7 +382,7 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 			}
 		}
 		ODirSet.clear();
-		std::cout << FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str();
+		std::cout << Utility::FormatTimeNS(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count()).c_str() << "\n";
 	}
 
 	_finished = true;
@@ -370,4 +399,62 @@ void Functions::Wait()
 	{
 		thr.join();
 	}
+}
+
+std::string Utility::FormatTime(int64_t microseconds)
+{
+	std::stringstream ss;
+	int64_t tmp = 0;
+	if (microseconds > 60000000) {
+		tmp = (int64_t)trunc((long double)microseconds / 60000000);
+		ss << std::setw(6) << tmp << "m ";
+		microseconds -= tmp * 60000000;
+	} else
+		ss << "        ";
+	if (microseconds > 1000000) {
+		tmp = (int64_t)trunc((long double)microseconds / 1000000);
+		ss << std::setw(2) << tmp << "s ";
+		microseconds -= tmp * 1000000;
+	} else
+		ss << "    ";
+	if (microseconds > 1000) {
+		tmp = (int64_t)trunc((long double)microseconds / 1000);
+		ss << std::setw(3) << tmp << "ms ";
+		microseconds -= tmp * 1000;
+	} else
+		ss << "      ";
+	ss << std::setw(3) << microseconds << "μs";
+	return ss.str();
+}
+
+std::string Utility::FormatTimeNS(int64_t nanoseconds)
+{
+	std::stringstream ss;
+	int64_t tmp = 0;
+	if (nanoseconds > 60000000000) {
+		tmp = (int64_t)trunc((long double)nanoseconds / 60000000000);
+		ss << std::setw(6) << tmp << "m ";
+		nanoseconds -= tmp * 60000000000;
+	} else
+		ss << "        ";
+	if (nanoseconds > 1000000000) {
+		tmp = (int64_t)trunc((long double)nanoseconds / 1000000000);
+		ss << std::setw(2) << tmp << "s ";
+		nanoseconds -= tmp * 1000000000;
+	} else
+		ss << "    ";
+	if (nanoseconds > 1000000) {
+		tmp = (int64_t)trunc((long double)nanoseconds / 1000000);
+		ss << std::setw(3) << tmp << "ms ";
+		nanoseconds -= tmp * 1000000;
+	} else
+		ss << "      ";
+	if (nanoseconds > 1000) {
+		tmp = (int64_t)trunc((long double)nanoseconds / 1000);
+		ss << std::setw(3) << tmp << "μs ";
+		nanoseconds -= tmp * 1000;
+	} else
+		ss << "      ";
+	ss << std::setw(3) << nanoseconds << "ns";
+	return ss.str();
 }
