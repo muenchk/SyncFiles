@@ -66,8 +66,11 @@ private:
 public:
 	static void GetFiles(std::filesystem::path inputPath, std::deque<std::wstring>& outfiles, std::deque<std::wstring>& outdirs);
 	static boost::unordered_set<std::wstring> GetFilesRelative(std::filesystem::path inputPath);
+	static void GetFilesRelative(std::filesystem::path inputPath, boost::unordered_set<std::wstring>& files, boost::unordered_set<std::wstring>& dirs);
 
 	void Copy(std::filesystem::path inputPath, std::filesystem::path outputPath, bool deletewithoutmatch, bool overwriteexisting, bool force, bool move, int processors);
+
+	void ReconstitueSymlinks(std::vector<std::filesystem::path> folders);
 
 	void Wait();
 

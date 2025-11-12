@@ -148,12 +148,15 @@ int main(int argc, char** argv)
 	int processors = 1;
 	bool debug = false;
 	bool search = false;
+	bool reconstitutesymlinks = false;
 	std::vector<std::string> sinodes;
 	for (int i = 1; i < argc; i++) {
 		size_t pos = 0;
 		std::string option = std::string(argv[i]);
 		if (option.find("--debug") != std::string::npos)
 			debug = true;
+		else if (option.find("-reconstitutesymlinks") != std::string::npos)
+			reconstitutesymlinks = true;
 		else if (option.find("-rm") != std::string::npos)
 			remove = true;
 		else if (option.find("-d") != std::string::npos)
@@ -230,9 +233,7 @@ int main(int argc, char** argv)
 		{
 			std::cout << "Aborting...\n";
 			std::exit(0);
-		}
-		else
-		{
+		} else {
 			std::cout << "Deleting Files...\n";
 		}
 		try {
@@ -240,11 +241,19 @@ int main(int argc, char** argv)
 				std::filesystem::remove(pth);
 			for (auto pth : rdirs)
 				std::filesystem::remove_all(pth);
-		}
-		catch (std::exception& e) {
+		} catch (std::exception& e) {
 			std::cout << e.what() << "\n";
 		}
 		std::cout << "Deleted all files.\n";
+	} else if (reconstitutesymlinks) {
+		// we will traverse a target directory looking for symlinks and replace them with files / folders that can be found in one of the other given folders in order of folders given
+		Functions func;
+		std::thread th1([&func, rdirs]() {
+			func.ReconstitueSymlinks(rdirs);
+		});
+
+		th1.join();
+
 	} else {
 		if (!std::filesystem::exists(pathInput)) {
 			printf("Input path is empty\n");

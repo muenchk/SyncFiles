@@ -200,6 +200,28 @@ boost::unordered_set<std::wstring> Functions::GetFilesRelative(std::filesystem::
 	}
 	return files;
 }
+
+void Functions::GetFilesRelative(std::filesystem::path inputPath, boost::unordered_set<std::wstring>& files, boost::unordered_set<std::wstring>& dirs)
+{
+	if (std::filesystem::exists(inputPath) == false) {
+		return;
+	}
+	std::wstring _inputPrefix = inputPath.wstring().append(1, std::filesystem::path::preferred_separator);
+	int inputprefixlength = (int)_inputPrefix.length();
+
+	auto inputiter = std::filesystem::recursive_directory_iterator(inputPath, std::filesystem::directory_options::follow_directory_symlink);
+	//iterate over all entries
+	try {
+		for (auto const& dir_entry : inputiter) {
+			if (dir_entry.is_directory())
+				dirs.insert(dir_entry.path().wstring().substr(inputprefixlength, dir_entry.path().wstring().size() - inputprefixlength));
+			else
+				files.insert(dir_entry.path().wstring().substr(inputprefixlength, dir_entry.path().wstring().size() - inputprefixlength));
+		}
+	} catch (std::filesystem::filesystem_error& e) {
+		printf("ERROR: %s\n", e.what());
+	}
+}
 void Functions::GetFiles(std::filesystem::path inputPath, std::deque<std::wstring>& outfiles, std::deque<std::wstring>& outdirs)
 {
 	if (std::filesystem::exists(inputPath) == false) {
@@ -220,6 +242,51 @@ void Functions::GetFiles(std::filesystem::path inputPath, std::deque<std::wstrin
 	} catch (std::filesystem::filesystem_error& e) {
 		printf("ERROR: %s\n", e.what());
 	}
+}
+
+void Functions::ReconstitueSymlinks(std::vector<std::filesystem::path> folders)
+{
+	std::cout << "Begin Reconstitution.\n" << folders.size();
+	std::vector<boost::unordered_set<std::wstring>> files;
+	std::vector<boost::unordered_set<std::wstring>> dirs;
+	std::vector<int> prefixlengths;
+	std::vector<std::wstring> prefixes;
+	for (size_t i = 0; i < folders.size(); i++) {
+		prefixes.push_back(folders[i].wstring().append(1, std::filesystem::path::preferred_separator));
+		prefixlengths.push_back((int)prefixes[i].length());
+		files.push_back({});
+		dirs.push_back({});
+		GetFilesRelative(folders[i], files[i], dirs[i]);
+	}
+
+	// iterate over all dirs in the original and replace the dirs
+	for (auto dir : dirs[0])
+	{
+		std::filesystem::path pth(prefixes[0] + dir);
+		std::filesystem::directory_entry direntry(pth);
+		if (direntry.symlink_status().type() == std::filesystem::file_type::junction)
+		{
+			std::cout << "Found Junction. Searching for replacement...";
+			bool found = false;
+			for (size_t i = 1; i < folders.size(); i++)
+			{
+				if (dirs[i].contains(dir))
+				{
+					found = true;
+					std::cout << "\t Found replacement. Copy replacement...";
+
+					std::filesystem::remove(pth);
+					std::filesystem::create_directories(pth);
+					std::filesystem::copy(prefixes[i] + dir, prefixes[0] + dir, std::filesystem::copy_options::recursive);
+					std::cout << "\t Copied replacement.\n";
+					break;
+				}
+			}
+			if (!found)
+				std::cout << "\t No replacement found.";
+		}
+	}
+	std::cout << "End Reconstitution.\n";
 }
 
 void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outputPath, bool deletewithoutmatch, bool overwriteexisting, bool force, bool move, int processors)
