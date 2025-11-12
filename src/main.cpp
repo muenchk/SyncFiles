@@ -271,6 +271,7 @@ int main(int argc, char** argv)
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		}
 		th.join();
+		printf("Written Files:\t%5llu / %5llu\t\tSizeWritten:\t%llu / %llu\n", func._filesCopied.load(), func._filesToCopy.load(), func._bytesCopied.load(), func._bytesToCopy.load());
 
 		printf("Errors: %zd\n", func.errors.size());
 		for (size_t i = 0; i < func.errors.size(); i++) {
