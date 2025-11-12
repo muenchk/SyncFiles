@@ -341,11 +341,11 @@ void Functions::Copy(std::filesystem::path inputPath, std::filesystem::path outp
 
 	_doneStuff = true;
 	
-	_activeCopy = false;
 	for (int i = 0; i < processors; i++) {
 		_threads[i].join();
 	}
 	_threads.clear();
+	_activeCopy = false;
 
 	// clean up
 
