@@ -138,6 +138,7 @@ int main(int argc, char** argv)
 		printf("-rm\t\tDeletes files / folders\n");
 		printf("--debug\tPrints debug information\n");
 		printf("-p<NUM>\tNumber of processors to use\n");
+		printf("-reconstitutesymlinks\tResolves symlinks in the first given folder and replaces them by copying the underlying folder [supports -m for moving the original instead]");
 		exit(1);
 	}
 	bool deletewithoutmatch = false;
