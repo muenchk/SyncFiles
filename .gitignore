@@ -2,14 +2,16 @@ build/
 buildvr/
 buildLinux/
 .vs/
+.vscode
 src/.vs/
 src/.vscode
 src/out
 src/TODO.txt
 src/Changelog.txt
-startenv.bat
+startenv*.bat
 startenvlaptop.bat
 tests_out/
+*.pdb
 
 # Prerequisites
 *.d

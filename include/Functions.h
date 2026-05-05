@@ -70,7 +70,7 @@ public:
 
 	void Copy(std::filesystem::path inputPath, std::filesystem::path outputPath, bool deletewithoutmatch, bool overwriteexisting, bool force, bool move, int processors);
 
-	void ReconstitueSymlinks(std::vector<std::filesystem::path> folders);
+	void ReconstitueSymlinks(std::vector<std::filesystem::path> folders, bool move);
 
 	void Wait();
 

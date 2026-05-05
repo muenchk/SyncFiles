@@ -247,9 +247,19 @@ int main(int argc, char** argv)
 		std::cout << "Deleted all files.\n";
 	} else if (reconstitutesymlinks) {
 		// we will traverse a target directory looking for symlinks and replace them with files / folders that can be found in one of the other given folders in order of folders given
+		if (move) {
+			printf("Do you really want to replace all symlinks by moving the original folders? [y|n]");
+			std::string ans;
+			std::cin >> ans;
+			if (ans.size() == 0 || ans[0] != 'y') {
+				printf("Aborted.");
+				exit(0);
+			}
+		}
+
 		Functions func;
-		std::thread th1([&func, rdirs]() {
-			func.ReconstitueSymlinks(rdirs);
+		std::thread th1([&func, rdirs, move]() {
+			func.ReconstitueSymlinks(rdirs, move);
 		});
 
 		th1.join();

@@ -244,9 +244,9 @@ void Functions::GetFiles(std::filesystem::path inputPath, std::deque<std::wstrin
 	}
 }
 
-void Functions::ReconstitueSymlinks(std::vector<std::filesystem::path> folders)
+void Functions::ReconstitueSymlinks(std::vector<std::filesystem::path> folders, bool move)
 {
-	std::cout << "Begin Reconstitution.\n" << folders.size();
+	std::cout << "Begin Reconstitution.\n";
 	std::vector<boost::unordered_set<std::wstring>> files;
 	std::vector<boost::unordered_set<std::wstring>> dirs;
 	std::vector<int> prefixlengths;
@@ -266,24 +266,15 @@ void Functions::ReconstitueSymlinks(std::vector<std::filesystem::path> folders)
 		std::filesystem::directory_entry direntry(pth);
 		if (direntry.symlink_status().type() == std::filesystem::file_type::junction)
 		{
-			std::cout << "Found Junction. Searching for replacement...";
-			bool found = false;
-			for (size_t i = 1; i < folders.size(); i++)
-			{
-				if (dirs[i].contains(dir) || dirs[i].contains(pth.filename().wstring()))
-				{
-					found = true;
-					std::cout << "\t Found replacement. Copy replacement...";
+			auto canonical = std::filesystem::canonical(direntry);
 
-					std::filesystem::remove(pth);
-					std::filesystem::create_directories(pth);
-					std::filesystem::copy(prefixes[i] + dir, prefixes[0] + dir, std::filesystem::copy_options::recursive);
-					std::cout << "\t Copied replacement.\n";
-					break;
-				}
-			}
-			if (!found)
-				std::cout << "\t No replacement found.";
+			std::cout << "Found Junction and target path. Copy replacement...";
+			std::filesystem::remove(pth);
+			if (move)
+				std::filesystem::rename(canonical, pth);
+			else
+				std::filesystem::copy(canonical, pth, std::filesystem::copy_options::recursive);
+			std::cout << "\t Copied replacement.\n";
 		}
 	}
 	std::cout << "End Reconstitution.\n";
