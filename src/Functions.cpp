@@ -270,10 +270,20 @@ void Functions::ReconstitueSymlinks(std::vector<std::filesystem::path> folders, 
 
 			std::cout << "Found Junction and target path. Copy replacement...";
 			std::filesystem::remove(pth);
-			if (move)
-				std::filesystem::rename(canonical, pth);
-			else
-				std::filesystem::copy(canonical, pth, std::filesystem::copy_options::recursive);
+			try {
+				if (move)
+					if (canonical.root_name() == pth.root_name())
+						std::filesystem::rename(canonical, pth);
+					else {
+						std::filesystem::copy(canonical, pth, std::filesystem::copy_options::recursive);
+						std::filesystem::remove_all(canonical);
+					}
+				else
+					std::filesystem::copy(canonical, pth, std::filesystem::copy_options::recursive);
+				}
+			catch (std::exception &e){
+				std::cout << e.what() << "\n";
+			}
 			std::cout << "\t Copied replacement.\n";
 		}
 	}
